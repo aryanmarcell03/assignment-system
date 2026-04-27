@@ -1,12 +1,13 @@
 <?php
-// Redirect to login if session is not valid [cite: 24, 112]
-if (!isset($_SESSION['user'])) {
+
+// Redirect to login if session is not valid
+if (!isset($_SESSION['user_id'])) {
     header("Location: login.php");
     exit();
 }
 
-$user = $_SESSION['user'];
-$role = $user['role'];
+$role = $_SESSION['role'];
+$username = $_SESSION['username'];
 ?>
 <!DOCTYPE html>
 <html lang="en">
