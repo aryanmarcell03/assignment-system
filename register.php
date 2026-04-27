@@ -8,9 +8,17 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $username = trim($_POST['username']);
     $email = trim($_POST['email']);
     $password_raw = $_POST['password'];
+    $role = $_POST['role']; 
 
-    if (empty($username) || empty($email) || empty($password_raw)) {
+    // Server-side validation
+    if (empty($username) || empty($email) || empty($password_raw) || empty($role)) {
         $message = "All fields are required!";
+    } else if (strlen($username) < 3) {
+        $message = "Name must be at least 3 characters!";
+    } else if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        $message = "Please enter a valid email address!";
+    } else if (strlen($password_raw) < 6) {
+        $message = "Password must be at least 6 characters!";
     } else {
 
         $check = $conn->prepare("SELECT id FROM users WHERE email=?");
@@ -22,15 +30,14 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             $message = "Email already exists!";
         } else {
 
-            // hash password
             $password = password_hash($password_raw, PASSWORD_DEFAULT);
 
-            // insert user
-            $stmt = $conn->prepare("INSERT INTO users (name, email, password) VALUES (?, ?, ?)");
-            $stmt->bind_param("sss", $username, $email, $password);
+            // Updated INSERT statement to include the role column
+            $stmt = $conn->prepare("INSERT INTO users (name, email, password, role) VALUES (?, ?, ?, ?)");
+            $stmt->bind_param("ssss", $username, $email, $password, $role);
 
             if ($stmt->execute()) {
-                $message = "Register success!";
+                $message = "Register successful! <a href='login.php' class='alert-link'>Login here</a>";
             } else {
                 $message = "Something went wrong!";
             }
@@ -68,6 +75,39 @@ body {
     color: white;
 }
 </style>
+
+<script>
+function validateRegisterForm() {
+    let username = document.getElementById('username').value.trim();
+    let email = document.getElementById('email').value.trim();
+    let password = document.getElementById('password').value;
+    let role = document.getElementById('role').value;
+    
+    if (username === '' || email === '' || password === '' || role === '') {
+        alert('All fields are required!');
+        return false;
+    }
+    
+    if (username.length < 3) {
+        alert('Name must be at least 3 characters!');
+        return false;
+    }
+    
+    // Email validation
+    let emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+        alert('Please enter a valid email address!');
+        return false;
+    }
+    
+    if (password.length < 6) {
+        alert('Password must be at least 6 characters!');
+        return false;
+    }
+    
+    return true;
+}
+</script>
 </head>
 
 <body>
@@ -80,18 +120,26 @@ body {
         <div class="alert alert-info"><?php echo $message; ?></div>
     <?php } ?>
 
-    <form method="POST">
+    <form method="POST" onsubmit="return validateRegisterForm()">
 
         <div class="mb-3">
-            <input type="text" name="username" class="form-control" placeholder="Name" required>
+            <input type="text" id="username" name="username" class="form-control" placeholder="Name" required>
         </div>
 
         <div class="mb-3">
-            <input type="email" name="email" class="form-control" placeholder="Email" required>
+            <input type="email" id="email" name="email" class="form-control" placeholder="Email" required>
         </div>
 
         <div class="mb-3">
-            <input type="password" name="password" class="form-control" placeholder="Password" required>
+            <input type="password" id="password" name="password" class="form-control" placeholder="Password" required>
+        </div>
+
+        <div class="mb-3">
+            <select id="role" name="role" class="form-control" required>
+                <option value="">Select Role</option>
+                <option value="student">Student</option>
+                <option value="admin">Admin</option>
+            </select>
         </div>
 
         <button type="submit" class="btn btn-custom w-100">Register</button>
