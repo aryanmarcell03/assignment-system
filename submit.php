@@ -1,9 +1,9 @@
 <?php
+session_start();
 require "config.php";
 
 $message = "";
 
-// check login
 if (!isset($_SESSION['user_id'])) {
     header("Location: login.php");
     exit();
@@ -11,27 +11,29 @@ if (!isset($_SESSION['user_id'])) {
 
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
-    $title = htmlspecialchars($_POST['title']);
-    $desc = htmlspecialchars($_POST['description']);
-    $category = htmlspecialchars($_POST['category']);
+    $title = htmlspecialchars(trim($_POST['title']));
+    $desc = htmlspecialchars(trim($_POST['description']));
+    $category = htmlspecialchars(trim($_POST['category']));
 
-    // validation
     if (empty($title) || empty($desc) || empty($category)) {
         $message = "All fields are required!";
     } else {
 
         $filename = "";
 
-        // handle file upload
         if (!empty($_FILES['file']['name'])) {
 
             $target_dir = "uploads/";
+
+            if (!is_dir($target_dir)) {
+                mkdir($target_dir, 0777, true);
+            }
+
             $filename = time() . "_" . basename($_FILES["file"]["name"]);
             $target_file = $target_dir . $filename;
 
             $fileType = strtolower(pathinfo($target_file, PATHINFO_EXTENSION));
 
-            // allow file types
             $allowed = ['jpg','jpeg','png','pdf'];
 
             if (!in_array($fileType, $allowed)) {
@@ -40,24 +42,32 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
                 if (move_uploaded_file($_FILES["file"]["tmp_name"], $target_file)) {
 
-                    // save to database
                     $stmt = $conn->prepare("INSERT INTO requests (user_id, title, description, category, file) VALUES (?, ?, ?, ?, ?)");
-                    $stmt->bind_param("issss", $_SESSION['user_id'], $title, $desc, $category, $filename);
-                    $stmt->execute();
+                    
+                    if ($stmt) {
+                        $stmt->bind_param("issss", $_SESSION['user_id'], $title, $desc, $category, $filename);
+                        $stmt->execute();
+                        $message = "Request submitted successfully!";
+                    } else {
+                        $message = "Database error!";
+                    }
 
-                    $message = "Request submitted successfully!";
                 } else {
                     $message = "File upload failed!";
                 }
             }
 
         } else {
-            // no file (still allow submit)
+        
             $stmt = $conn->prepare("INSERT INTO requests (user_id, title, description, category, file) VALUES (?, ?, ?, ?, ?)");
-            $stmt->bind_param("issss", $_SESSION['user_id'], $title, $desc, $category, $filename);
-            $stmt->execute();
-
-            $message = "Request submitted (no file)";
+            
+            if ($stmt) {
+                $stmt->bind_param("issss", $_SESSION['user_id'], $title, $desc, $category, $filename);
+                $stmt->execute();
+                $message = "Request submitted (no file)";
+            } else {
+                $message = "Database error!";
+            }
         }
     }
 }
@@ -79,7 +89,7 @@ function validateForm() {
     let desc = document.forms["form"]["description"].value;
     let cat = document.forms["form"]["category"].value;
 
-    if (title == "" || desc == "" || cat == "") {
+    if (title == "" ||  desc == "" ||  cat == "") {
         alert("All fields must be filled!");
         return false;
     }
@@ -100,7 +110,7 @@ function validateForm() {
         <h3 class="mb-3">Submit Request</h3>
 
         <?php if(!empty($message)): ?>
-            <div class="alert alert-info"><?= $message ?></div>
+            <div class="alert alert-info"><?= htmlspecialchars($message) ?></div>
         <?php endif; ?>
 
         <form name="form" method="POST" enctype="multipart/form-data" onsubmit="return validateForm()">
