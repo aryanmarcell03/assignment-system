@@ -1,11 +1,11 @@
 <?php 
-session_start(); 
+session_start();
 
 require "config.php";
 
 $error = "";
 
-if ($_SERVER["REQUEST_METHOD"] == "POST") {
+if (isset($_POST['login'])) {
 
     $email = trim($_POST['email']);
     $password = $_POST['password'];
@@ -14,7 +14,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         $error = "All fields required";
     } else {
 
-        $stmt = $conn->prepare("SELECT * FROM users WHERE email=?");
+        $stmt = $conn->prepare("SELECT id, name, password, role FROM users WHERE email = ?");
         $stmt->bind_param("s", $email);
         $stmt->execute();
         $result = $stmt->get_result();
@@ -25,16 +25,20 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
                 $_SESSION['user_id'] = $row['id'];
                 $_SESSION['username'] = $row['name']; // FIX SINI
+                $_SESSION['role'] = $row['role'];
 
-                header("Location: dashboard.php");
+                echo "<script>
+                    alert('Login Successful! Welcome ' + '" . $_SESSION['username'] . "');
+                    window.location.href = 'dashboard.php';
+                </script>";
                 exit();
 
             } else {
-                $error = "Incorrect password";
+                $error = "Invalid username or password.";
             }
 
         } else {
-            $error = "User not found";
+            $error = "Invalid username or password.";
         }
     }
 }
@@ -65,18 +69,39 @@ body {
 }
 </style>
 
+<script>
+function validateLoginForm() {
+    let email = document.getElementById('email').value.trim();
+    let password = document.getElementById('password').value;
+    
+    if (email === '' || password === '') {
+        alert('All fields are required!');
+        return false;
+    }
+    
+    // Basic email validation
+    let emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+        alert('Please enter a valid email address!');
+        return false;
+    }
+    
+    return true;
+}
+</script>
+
 </head>
 <body>
 
 <div class="card card-custom">
     <h3 class="text-center mb-4">Login</h3>
 
-    <form method="POST">
-        <input type="email" name="email" class="form-control mb-3" placeholder="Email" required>
+    <form action="login.php" method="POST" onsubmit="return validateLoginForm()">
+        <input type="email" id="email" name="email" class="form-control mb-3" placeholder="Email" required>
 
-        <input type="password" name="password" class="form-control mb-3" placeholder="Password" required>
+        <input type="password" id="password" name="password" class="form-control mb-3" placeholder="Password" required>
 
-        <button class="btn btn-primary w-100">Login</button>
+        <button type="submit" name="login" class="btn btn-primary w-100">Login</button>
     </form>
 
     <p class="text-danger text-center mt-3"><?= $error ?></p>
