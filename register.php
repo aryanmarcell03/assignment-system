@@ -5,23 +5,35 @@ $message = "";
 
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
-    $username = htmlspecialchars($_POST['username']);
-    $email = htmlspecialchars($_POST['email']);
+    $username = trim($_POST['username']);
+    $email = trim($_POST['email']);
     $password_raw = $_POST['password'];
 
     if (empty($username) || empty($email) || empty($password_raw)) {
         $message = "All fields are required!";
     } else {
 
-        $password = password_hash($password_raw, PASSWORD_DEFAULT);
+        $check = $conn->prepare("SELECT id FROM users WHERE email=?");
+        $check->bind_param("s", $email);
+        $check->execute();
+        $check->store_result();
 
-        $stmt = $conn->prepare("INSERT INTO users (username, email, password) VALUES (?, ?, ?)");
-        $stmt->bind_param("sss", $username, $email, $password);
-
-        if ($stmt->execute()) {
-            $message = "Register success!";
-        } else {
+        if ($check->num_rows > 0) {
             $message = "Email already exists!";
+        } else {
+
+            // hash password
+            $password = password_hash($password_raw, PASSWORD_DEFAULT);
+
+            // insert user
+            $stmt = $conn->prepare("INSERT INTO users (name, email, password) VALUES (?, ?, ?)");
+            $stmt->bind_param("sss", $username, $email, $password);
+
+            if ($stmt->execute()) {
+                $message = "Register success!";
+            } else {
+                $message = "Something went wrong!";
+            }
         }
     }
 }
