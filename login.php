@@ -1,4 +1,5 @@
 <?php 
+session_start(); 
 
 require "config.php";
 
@@ -12,22 +13,26 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     if(empty($email) || empty($password)){
         $error = "All fields required";
     } else {
+
         $stmt = $conn->prepare("SELECT * FROM users WHERE email=?");
         $stmt->bind_param("s", $email);
         $stmt->execute();
         $result = $stmt->get_result();
 
         if ($row = $result->fetch_assoc()) {
+
             if (password_verify($password, $row['password'])) {
 
                 $_SESSION['user_id'] = $row['id'];
-                $_SESSION['username'] = $row['username']; 
+                $_SESSION['username'] = $row['name']; // FIX SINI
 
                 header("Location: dashboard.php");
                 exit();
+
             } else {
                 $error = "Incorrect password";
             }
+
         } else {
             $error = "User not found";
         }
